@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Days One", "Onest", sans-serif;
+  --font-sans: "Onest", system-ui, sans-serif;
+  --color-ink: #0b0b0d;
+  --color-panel: #141416;
+  --color-raised: #1c1c20;
+  --color-line: #2c2c32;
+  --color-orange: #ff7f3b;
+  --color-peach: #ffddbb;
+  --color-lime: #d5ff49;
+  --color-lavender: #debaff;
+  --color-purple: #b477ed;
+}
+
+html,
+body {
+  background: radial-gradient(1200px 600px at 10% -10%, #1b1420 0%, #0b0b0d 45%);
+  color: #f4f0ea;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+input,
+select,
+textarea {
+  background: #0f0f12;
+  border: 1px solid #2c2c32;
+  color: #f4f0ea;
+  border-radius: 12px;
+  padding: 0.55rem 0.75rem;
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #ff7f3b66;
+  border-color: #ff7f3b;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid #2c2c32;
+  border-radius: 16px;
+  background: #141416cc;
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 960px;
+  font-size: 13px;
+}
+
+table.data th,
+table.data td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #2c2c32;
+  text-align: left;
+  white-space: nowrap;
+}
+
+table.data th {
+  color: #ffddbb;
+  font-weight: 500;
+  background: #1a1a1e;
+  position: sticky;
+  top: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: #0b0b0d;
+}

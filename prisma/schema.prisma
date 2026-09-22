@@ -1,0 +1,399 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum LeadStatus {
+  AGREED
+  NO_REPLY
+  REFUSED
+  NEXT_EVENT
+}
+
+enum SponsorCategory {
+  FOOD
+  BEAUTY
+  ENTERTAINMENT
+  JEWELRY
+  TOYS
+  CLOTHING
+  HANDMADE
+  OTHER
+}
+
+enum AdFormat {
+  VOICE
+  VIDEO
+  BOTH
+  NONE
+}
+
+enum VkPostStatus {
+  PUBLISHED
+  NOT_PUBLISHED
+  SCHEDULED
+}
+
+enum TaskStage {
+  TERMS
+  MATERIALS
+  GIFT_COLLECTED
+  POST_PUBLISHED
+  REPORT_SENT
+}
+
+enum ReminderType {
+  NUDGE
+  THANK_YOU
+  STATUS_CHECK
+  CUSTOM
+}
+
+enum ReminderRepeat {
+  NONE
+  DAILY
+  WEEKLY
+}
+
+enum DocumentCategory {
+  COMMERCIAL
+  THANK_YOU
+  CHECKLIST
+  POST_TEMPLATE
+  EVENT_REPORT
+}
+
+enum EventStatus {
+  DRAFT
+  ACTIVE
+  DONE
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name              String
+  email             String?   @unique
+  emailVerified     DateTime?
+  image             String?
+  passwordHash      String?
+  role              Role      @default(MEMBER)
+  telegramId        String?   @unique
+  telegramUsername  String?
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  invitesCreated    Invite[]           @relation("InviteCreator")
+  ownedLeads        PipelineLead[]     @relation("LeadOwner")
+  foundSponsorships Sponsorship[]      @relation("SponsorshipFinder")
+  assignedTasks     Task[]             @relation("TaskAssignee")
+  reminders         Reminder[]
+  documents         Document[]
+  interactions      Interaction[]
+  auditLogs         AuditLog[]
+  savedFilters      SavedFilter[]
+  comments          Comment[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  email     String
+  role      Role      @default(MEMBER)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdBy String
+  creator   User      @relation("InviteCreator", fields: [createdBy], references: [id])
+  createdAt DateTime  @default(now())
+}
+
+model AppSettings {
+  id                   String   @id @default("default")
+  currentEventId       String?
+  ratingWrittenCoeff   Float    @default(1)
+  ratingPartnerCoeff   Float    @default(3)
+  ratingSumCoeff       Float    @default(0.001)
+  ratingEventCoeff     Float    @default(2)
+  vkGroupId            String?
+  vkToken              String?
+  telegramBotUsername  String?
+  timezone             String   @default("Asia/Novosibirsk")
+  updatedAt            DateTime @updatedAt
+}
+
+model Event {
+  id           String      @id @default(cuid())
+  name         String
+  startsAt     DateTime
+  endsAt       DateTime?
+  location     String?
+  status       EventStatus @default(ACTIVE)
+  customFields Json        @default("[]")
+  deletedAt    DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  sponsorships Sponsorship[]
+  documents    Document[]
+  reminders    Reminder[]
+  tasks        Task[]
+}
+
+model Contact {
+  id           String           @id @default(cuid())
+  brand        String
+  personName   String?
+  position     String?
+  category     SponsorCategory  @default(OTHER)
+  vk           String?
+  telegram     String?
+  whatsapp     String?
+  email        String?
+  phone        String?
+  notes        String?
+  deletedAt    DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  leads        PipelineLead[]
+  sponsorships Sponsorship[]
+  interactions Interaction[]
+  documents    Document[]
+  reminders    Reminder[]
+  comments     Comment[]
+}
+
+model Interaction {
+  id        String   @id @default(cuid())
+  contactId String
+  userId    String?
+  body      String
+  createdAt DateTime @default(now())
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model PipelineLead {
+  id              String           @id @default(cuid())
+  contactId       String
+  ownerId         String?
+  category        SponsorCategory  @default(OTHER)
+  product         String?
+  brand           String
+  links           String?
+  status          LeadStatus       @default(NO_REPLY)
+  comment         String?
+  lastContactAt   DateTime         @default(now())
+  rowColor        String?
+  deletedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  contact         Contact          @relation(fields: [contactId], references: [id])
+  owner           User?            @relation("LeadOwner", fields: [ownerId], references: [id])
+  reminders       Reminder[]
+  sponsorship     Sponsorship?     @relation("LeadConversion")
+
+  @@index([status])
+  @@index([ownerId])
+}
+
+model Sponsorship {
+  id              String           @id @default(cuid())
+  eventId         String
+  contactId       String
+  leadId          String?          @unique
+  finderId        String?
+  category        SponsorCategory  @default(OTHER)
+  product         String?
+  brand           String
+  unitPrice       Decimal          @default(0) @db.Decimal(12, 2)
+  quantity        Int              @default(1)
+  total           Decimal          @default(0) @db.Decimal(12, 2)
+  links           String?
+  hasLogo         Boolean          @default(false)
+  hasPostText     Boolean          @default(false)
+  adFormat        AdFormat         @default(NONE)
+  vkPostStatus    VkPostStatus     @default(NOT_PUBLISHED)
+  vkPostUrl       String?
+  guestName       String?
+  needsTable      Boolean          @default(false)
+  isJury          Boolean          @default(false)
+  customValues    Json             @default("{}")
+  archived        Boolean          @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  event           Event            @relation(fields: [eventId], references: [id])
+  contact         Contact          @relation(fields: [contactId], references: [id])
+  lead            PipelineLead?    @relation("LeadConversion", fields: [leadId], references: [id])
+  finder          User?            @relation("SponsorshipFinder", fields: [finderId], references: [id])
+  tasks           Task[]
+  documents       Document[]
+  reminders       Reminder[]
+  comments        Comment[]
+
+  @@index([eventId])
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  sponsorshipId  String
+  eventId        String?
+  assigneeId     String?
+  stage          TaskStage
+  title          String
+  done           Boolean    @default(false)
+  dueAt          DateTime?
+  sortOrder      Int        @default(0)
+  deletedAt      DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  sponsorship    Sponsorship @relation(fields: [sponsorshipId], references: [id], onDelete: Cascade)
+  event          Event?      @relation(fields: [eventId], references: [id])
+  assignee       User?       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  reminders      Reminder[]
+
+  @@unique([sponsorshipId, stage])
+}
+
+model Reminder {
+  id             String          @id @default(cuid())
+  type           ReminderType    @default(CUSTOM)
+  title          String
+  body           String?
+  dueAt          DateTime
+  repeat         ReminderRepeat  @default(NONE)
+  sentAt         DateTime?
+  userId         String?
+  contactId      String?
+  leadId         String?
+  sponsorshipId  String?
+  eventId        String?
+  taskId         String?
+  createdAt      DateTime        @default(now())
+
+  user           User?           @relation(fields: [userId], references: [id])
+  contact        Contact?        @relation(fields: [contactId], references: [id])
+  lead           PipelineLead?   @relation(fields: [leadId], references: [id])
+  sponsorship    Sponsorship?    @relation(fields: [sponsorshipId], references: [id])
+  event          Event?          @relation(fields: [eventId], references: [id])
+  task           Task?           @relation(fields: [taskId], references: [id])
+
+  @@index([dueAt, sentAt])
+}
+
+model Document {
+  id             String            @id @default(cuid())
+  title          String
+  category       DocumentCategory
+  tags           String[]          @default([])
+  url            String
+  mimeType       String?
+  size           Int?
+  contactId      String?
+  eventId        String?
+  sponsorshipId  String?
+  fieldKey       String?
+  uploadedById   String?
+  deletedAt      DateTime?
+  createdAt      DateTime          @default(now())
+
+  contact        Contact?          @relation(fields: [contactId], references: [id])
+  event          Event?            @relation(fields: [eventId], references: [id])
+  sponsorship    Sponsorship?      @relation(fields: [sponsorshipId], references: [id])
+  uploadedBy     User?             @relation(fields: [uploadedById], references: [id])
+}
+
+model Comment {
+  id             String        @id @default(cuid())
+  body           String
+  userId         String
+  contactId      String?
+  sponsorshipId  String?
+  createdAt      DateTime      @default(now())
+  user           User          @relation(fields: [userId], references: [id])
+  contact        Contact?      @relation(fields: [contactId], references: [id])
+  sponsorship    Sponsorship?  @relation(fields: [sponsorshipId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entity     String
+  entityId   String
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+}
+
+model SavedFilter {
+  id        String   @id @default(cuid())
+  userId    String
+  page      String
+  name      String
+  payload   Json
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  channel   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
