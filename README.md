@@ -21,11 +21,7 @@ npm run db:seed
 npm run dev
 ```
 
-Вход после сида:
-
-- руководитель: `admin@sgups.local` / `admin1234`
-- член центра: `member@sgups.local` / `member1234`
-- смотрящий: `viewer@sgups.local` / `viewer1234`
+Обычная регистрация создаёт смотрящего. Учётную запись руководителя создаёт скрипт заполнения (`npm run db:seed`); пароль задаётся переменной `ADMIN_PASSWORD` в `.env.local`.
 
 Часовой пояс: `Asia/Novosibirsk`. Тема тёмная. Интерфейс — Onest (временная замена Cygre). Заголовки — Days One с fallback на Onest для кириллицы. Свои файлы Cygre кладите в `public/fonts/`.
 
