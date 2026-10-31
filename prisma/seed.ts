@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { hash } from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { DEFAULT_TEMPLATES } from "../src/lib/domain/templates";
@@ -6,9 +7,14 @@ import { TASK_CHAIN } from "../src/lib/domain/tasks";
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminPass = await hash(process.env.ADMIN_PASSWORD ?? "admin1234", 10);
-  const memberPass = await hash("member1234", 10);
-  const viewerPass = await hash("viewer1234", 10);
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword || adminPassword.length < 10) {
+    throw new Error("Задайте ADMIN_PASSWORD (не короче 10 символов) в .env.local перед запуском сида.");
+  }
+  const adminPass = await hash(adminPassword, 10);
+  // демо-пользователи получают случайные пароли: войти под ними нельзя, пока руководитель не задаст пароль
+  const memberPass = await hash(randomBytes(24).toString("hex"), 10);
+  const viewerPass = await hash(randomBytes(24).toString("hex"), 10);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@sgups.local" },
